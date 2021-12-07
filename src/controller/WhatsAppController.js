@@ -8,6 +8,7 @@ import { Chat } from '../model/Chat';
 import { Message } from '../model/Message';
 import { Base64 } from "../util/base64";
 import { ContactsController } from './ContactsController';
+import { Metadata } from 'pdfjs-dist';
 
 export class WhatsAppController {
 
@@ -193,7 +194,7 @@ export class WhatsAppController {
             let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - 
             this.el.panelMessagesContainer.offsetHeight);
             let autoScroll = (scrollTop >= scrollTopMax);
-            
+    
             docs.forEach(doc =>{
 
                 let data = doc.data();
@@ -204,6 +205,8 @@ export class WhatsAppController {
                 message.fromJSON(data);
 
                 let me = (data.from === this._user.email);
+
+                let view = message.getViewElement(me);
 
             if (!this.el.panelMessagesContainer.querySelector('#_' + data.id)) {
 
@@ -220,15 +223,13 @@ export class WhatsAppController {
                     });
                 }
                 
-                let view = message.getViewElement(me);
-
                 this.el.panelMessagesContainer.appendChild(view);
 
             }else{
 
-                let view = message.getViewElement(me);
+                let parent = this.el.panelMessagesContainer.querySelector('#_' + data.id).parentNode;
 
-                this.el.panelMessagesContainer.querySelector('#_' + data.id).innerHTML = view.innerHTML;
+                parent.replaceChild(view, this.el.panelMessagesContainer.querySelector('#_' + data.id));
 
             } 
             
@@ -238,6 +239,33 @@ export class WhatsAppController {
 
                 msgEl.querySelector('.message-status').innerHTML = message.getStatusViewElement().outerHTML;
 
+            }
+
+            if (message.type === 'contact') {
+
+                view.querySelector('.btn-message-send').on('click', e=>{
+
+                    Chat.createIfNotExists(this._user.email, message.content.email).then(chat =>{
+
+                        let contact = new User(message.content.email);
+
+                        contact.on('datachange', data =>{
+
+                            contact.chatId = chat.id;
+
+                        this._user.addContact(contact);
+
+                        this._user.chatId = chat.id;
+
+                        contact.addContact(this._user);
+
+                        this.setActiveChat(contact);
+
+                        });
+
+                    });
+
+                });
             }
 
         });
@@ -771,6 +799,12 @@ export class WhatsAppController {
         });
 
         this.el.btnFinishMicrophone.on('click', e=>{
+
+            this._microphoneController.on('recorded', (file, metadata) =>{
+
+                Message.sendAudio(this._contactActive.chatId, this._user.email, file, metadata, this._user.photo);
+
+            });
 
             this._microphoneController.stopRecorder();
             this.closeRecordMicrophone();
