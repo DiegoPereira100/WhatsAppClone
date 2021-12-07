@@ -427,6 +427,12 @@ export class WhatsAppController {
 
         });
 
+        this.el.inputProfilePhoto.on('change', e=>{
+
+            
+
+        });
+
         this.el.inputNamePanelEditProfile.on('keypress', e=>{
 
             if (e.key === 'Enter') {
