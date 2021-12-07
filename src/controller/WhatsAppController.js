@@ -6,6 +6,8 @@ import { Firebase } from './../util/Firebase';
 import { User } from '../model/User';
 import { Chat } from '../model/Chat';
 import { Message } from '../model/Message';
+import { Base64 } from "../util/base64";
+import { ContactsController } from './ContactsController';
 
 export class WhatsAppController {
 
@@ -222,7 +224,15 @@ export class WhatsAppController {
 
                 this.el.panelMessagesContainer.appendChild(view);
 
-            }else if(me){
+            }else{
+
+                let view = message.getViewElement(me);
+
+                this.el.panelMessagesContainer.querySelector('#_' + data.id).innerHTML = view.innerHTML;
+
+            } 
+            
+            if(this.el.panelMessagesContainer.querySelector('#_' + data.id) && me){
 
                 let msgEl = this.el.panelMessagesContainer.querySelector('#_' + data.id);
 
@@ -560,10 +570,10 @@ export class WhatsAppController {
                 context.scale(-1, 1);
 
                 context.drawImage(picture, 0, 0, canvas.width, canvas.height);
-            }
+        
 
             fetch(canvas.toDataURL(mimeType))
-            .then(res => {res.arrayBuffer(); })
+            .then(res => { return res.arrayBuffer(); })
             .then(buffer => {return new File([buffer], filename, {type: mimeType}); })
             .then(file => {
 
@@ -582,6 +592,8 @@ export class WhatsAppController {
                 this.el.panelMessagesContainer.show();
             });
 
+
+        }
            
 
         });
@@ -680,7 +692,24 @@ export class WhatsAppController {
 
         this.el.btnSendDocument.on('click', e=>{
 
-            console.log('send');
+            let file = this.el.inputDocument.files[0];
+            let base64 = this.el.imgPanelDocumentPreview.src;
+
+            if (file.type === 'application/pdf') {
+
+                Base64.toFile(base64).then(filePreview =>{
+
+                Message.sendDocument(this._contactActive.chatId, this._user.email, file, filePreview, this.el.infoPanelDocumentPreview.innerHTML);
+
+            });
+
+            }else {
+
+                Message.sendDocument(this._contactActive.chatId, this._user.email, file);
+
+            }
+
+            this.el.btnClosePanelDocumentPreview.click();
 
         });
 
@@ -688,11 +717,25 @@ export class WhatsAppController {
             
             this.el.modalContacts.show();
 
+            this._contactsController = new ContactsController(this.el.modalContacts, this._user);
+
+            this._contactsController.on('select', contact =>{
+
+                Message.sendContact(
+                    this._contactActive.chatId,
+                    this._user.email,
+                    contact
+                );
+
+            });
+
+            this._contactsController.open();
+
         });
 
         this.el.btnCloseModalContacts.on('click', e=>{
 
-            this.el.modalContacts.hide();
+            this._contactsController.close();
 
         });
 
