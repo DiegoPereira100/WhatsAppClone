@@ -1,6 +1,7 @@
 import { Firebase } from "../util/Firebase";
 import { Model } from "./Model";
 import { Format } from "../util/Format";
+import { Upload } from "../util/Upload";
 
 export class Message extends Model{
 
@@ -387,9 +388,8 @@ export class Message extends Model{
                             </div>
                         </div>
                     </div>
-                </div>
-                    
-                `;
+                </div>`
+                break;
         }
 
         let className = 'message-in';
@@ -409,25 +409,8 @@ export class Message extends Model{
 
     static upload(file, from) {
 
-        return new Promise((s, f)=>{
+        return Upload.send(file, from);
 
-            let uploadTask = Firebase.hd().ref(from).child(Date.now() + '_' + file.name).put(file);
-
-            uploadTask.on('state_changed', e=>{
-    
-                console.info('upload', e);
-    
-            }, err =>{
-    
-                f(err);
-    
-            }, ()=>{
-    
-                s(uploadTask.snapshot);
-    
-            });
-
-        });
     }
 
     static sendContact(chatId, from, contact) {
@@ -465,15 +448,15 @@ export class Message extends Model{
 
         Message.send(chatId, from, 'document', '').then(msgRef => {
 
-                Message.upload(file, from).then(snapshot=>{
+                Message.upload(file, from).then(downloadURL=>{
     
-                   let downloadFile = snapshot.downloadURL;
+                   let downloadFile = downloadURL;
 
                    if (filePreview) {
     
-                   Message.upload(filePreview, from).then(snapshot2 =>{
+                   Message.upload(filePreview, from).then(downloadURL2 =>{
     
-                    let downloadPreview = snapshot2.downloadURL;
+                    let downloadPreview = downloadURL2;
 
                     msgRef.set({
                         content: downloadFile,
